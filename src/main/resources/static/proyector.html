@@ -41,8 +41,9 @@
         .grande { text-align: center; }
         .grande .titulo { font-size: 2.4em; font-weight: 800; color: #4a3b8f; margin: 8px 0 16px; }
         .link { font-family: monospace; background: #f0f0f5; padding: 10px; border-radius: 6px; word-break: break-all; text-align: center; font-size: 1.1em; }
-        .qr { display: flex; justify-content: center; margin: 10px 0 16px; }
-        .qr svg { width: min(80vw, 380px); height: auto; background: white; }
+        .codigo { font-size: clamp(4em, 18vw, 9em); font-weight: 800; letter-spacing: .12em; color: #4a3b8f; line-height: 1.1; margin: 6px 0 10px; }
+        #vistaInscripcion p { font-size: clamp(1.1em, 2.6vw, 1.8em); margin: 6px 0; }
+        #direccion { word-break: break-all; }
         .oculto { display: none; }
     </style>
 </head>
@@ -53,10 +54,10 @@
 
     <div id="vistaInscripcion" class="oculto">
         <div class="card grande">
-            <h2>Escaneá el código con el celular para inscribirte</h2>
-            <div class="qr" id="qr"></div>
-            <p>o entrá a esta dirección:</p>
-            <p class="link" id="linkInscripcion"></p>
+            <h2>Inscribite desde el celular</h2>
+            <p>1. Entrá a <strong id="direccion"></strong></p>
+            <p>2. Tocá <strong>Torneo</strong> y escribí el código:</p>
+            <div class="codigo" id="codigoTorneo"></div>
             <h2 style="margin-top:20px">Inscriptos (<span id="cantInscriptos">0</span>)</h2>
             <div class="nombres" id="inscriptos" style="justify-content:center"></div>
         </div>
@@ -89,7 +90,6 @@
 
 <script src="js/sockjs.min.js"></script>
 <script src="js/stomp.min.js"></script>
-<script src="js/qrcode.js"></script>
 <script src="comun.js"></script>
 <script>
     const torneoId = new URLSearchParams(window.location.search).get('id');
@@ -121,11 +121,8 @@
         mostrar('vistaCampeon', t.estado === 'TERMINADO');
 
         if (t.estado === 'INSCRIPCION') {
-            const link = window.location.origin + '/torneo.html?id=' + t.id;
-            if ($('linkInscripcion').textContent !== link) {
-                $('linkInscripcion').textContent = link;
-                $('qr').innerHTML = codigoQR(link);
-            }
+            $('direccion').textContent = window.location.host;
+            $('codigoTorneo').textContent = t.id;
             $('cantInscriptos').textContent = t.inscriptos.length;
             $('inscriptos').innerHTML = t.inscriptos.map(i => '<span>' + esc(i.nombre) + '</span>').join('')
                 || '<em class="vacio">Esperando inscriptos…</em>';
@@ -136,14 +133,6 @@
             $('integrantesCampeon').innerHTML = t.campeon.maquina ? '<span>MIN-MAX</span>'
                 : t.campeon.integrantes.map(i => '<span>' + esc(i.nombre) + (i.id === t.campeon.capitanId ? ' ★' : '') + '</span>').join('');
         }
-    }
-
-    /** Código QR (SVG) con la dirección para inscribirse (RF-36). */
-    function codigoQR(texto) {
-        const qr = qrcode(0, 'M');
-        qr.addData(texto);
-        qr.make();
-        return qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true });
     }
 
     function lado(e, p) {

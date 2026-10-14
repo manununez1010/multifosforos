@@ -137,7 +137,7 @@ class TorneoServiceTest {
     @Test
     void tc30_crearTorneoQuedaEnInscripcion() {
         Torneo t = service.crearTorneo();
-        assertNotNull(t.getId());
+        assertTrue(t.getId().matches("\\d{4}"), "código de 4 números: " + t.getId());
         assertNotNull(t.getClaveAdmin());
         assertEquals(EstadoTorneo.INSCRIPCION, t.getEstado());
         assertTrue(t.getInscriptos().isEmpty());

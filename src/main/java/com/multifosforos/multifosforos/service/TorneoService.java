@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Torneo por absorción (specs: HU-08 a HU-16, RF-14 a RF-35, UC-06 a UC-14).
@@ -47,11 +48,18 @@ public class TorneoService {
 
     // ---------- UC-06: crear ----------
 
-    /** RF-14: torneo nuevo en INSCRIPCION. Quien lo crea recibe la clave para administrarlo. */
+    /**
+     * RF-14: torneo nuevo en INSCRIPCION, con un código de 4 números que no usa otro torneo.
+     * Quien lo crea recibe la clave para administrarlo.
+     */
     public Torneo crearTorneo() {
-        Torneo torneo = new Torneo();
-        torneos.put(torneo.getId(), torneo);
-        return torneo;
+        while (true) {
+            String codigo = String.valueOf(1000 + ThreadLocalRandom.current().nextInt(9000));
+            Torneo torneo = new Torneo(codigo);
+            if (torneos.putIfAbsent(codigo, torneo) == null) {
+                return torneo;
+            }
+        }
     }
 
     // ---------- UC-07: inscribirse ----------
@@ -282,7 +290,7 @@ public class TorneoService {
     // ---------- consultas ----------
 
     public Torneo obtenerTorneo(String torneoId) {
-        return torneoId != null ? torneos.get(torneoId) : null;
+        return torneoId != null ? torneos.get(torneoId.trim()) : null;
     }
 
     public List<Torneo> listarTorneos() {

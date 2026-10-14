@@ -168,8 +168,8 @@ terminó.
 **Flujo principal:**
 1. El docente pide crear un torneo.
 2. El sistema crea el torneo en estado "INSCRIPCION", sin inscriptos y
-   con un id único (RF-14).
-3. El sistema devuelve el id, para compartirlo con el curso, y la clave
+   con un código único de 4 números (RF-14).
+3. El sistema devuelve el código, para compartirlo con el curso, y la clave
    de administración, que queda guardada en el navegador del docente.
 
 **Flujo(s) alternativo(s):** ninguno.
@@ -427,7 +427,7 @@ participante.
 
 **Flujo(s) alternativo(s):**
 - 2a. Si el torneo está en inscripción, se muestran los inscriptos, la
-  dirección para inscribirse y un código QR con esa dirección (RF-36).
+  dirección del juego y, en grande, el código del torneo (RF-36).
 - 2b. Si el torneo terminó, se muestra el campeón (UC-13).
 
 **Postcondición:** ninguna (solo consulta).

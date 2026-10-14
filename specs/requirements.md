@@ -21,7 +21,7 @@
 | RF-11 | En una partida CONTRA_MAQUINA, después de cada jugada válida del humano que no termine la partida, el sistema debe jugar por la máquina la cantidad que elige MIN-MAX; si todas las jugadas pierden, la máquina saca 1. | HU-06 |
 | RF-12 | El sistema debe permitir consultar el estado completo de una partida por su id: fósforos iniciales y restantes, máximo por turno, modo, estado, jugadores, turno, ganador, perdedor e historial. | HU-07 |
 | RF-13 | El sistema debe notificar el estado actualizado de la partida a todos los que la siguen cada vez que se une un jugador o se acepta una jugada, y notificar el motivo del rechazo cuando una jugada se rechaza. | HU-07 |
-| RF-14 | El sistema debe permitir crear un torneo con un id único, en estado "INSCRIPCION" y sin inscriptos, y entregarle a quien lo crea una clave de administración (F-02). | HU-08 |
+| RF-14 | El sistema debe permitir crear un torneo con un código único de 4 números, en estado "INSCRIPCION" y sin inscriptos, y entregarle a quien lo crea una clave de administración (F-02). | HU-08 |
 | RF-15 | El sistema debe permitir que un alumno se inscriba en un torneo en estado "INSCRIPCION" indicando el id del torneo y su nombre, y rechazar la inscripción si ya hay un inscripto con ese nombre (sin distinguir mayúsculas) o si ese alumno ya está inscripto (F-02). | HU-09 |
 | RF-16 | El sistema debe rechazar toda inscripción en un torneo que ya fue iniciado (F-02). | HU-09, HU-10 |
 | RF-17 | Al iniciar el torneo, el sistema debe formar un equipo de un solo integrante por cada inscripto; ese integrante es el capitán del equipo (F-01, F-03, F-07). | HU-10 |
@@ -43,7 +43,7 @@
 | RF-33 | En la vista de la ronda, el sistema debe indicar, para cada partida en juego, qué equipo está en posición ganadora según MIN-MAX (F-14). | HU-15 |
 | RF-34 | Si un equipo pierde contra la máquina, el sistema debe eliminarlo (sus integrantes dejan de jugar) y la máquina debe seguir en el torneo como un participante más, sin integrantes. La máquina participa de la ronda siguiente si ganó al menos una partida en la ronda que terminó (aclaración del cliente sobre F-11). | HU-13 |
 | RF-35 | Si al terminar una ronda queda un solo participante, el sistema debe dar por terminado el torneo con ese participante como campeón. | HU-14 |
-| RF-36 | Mientras el torneo está en inscripción, la vista del proyector (y la página de quien administra el torneo) debe mostrar un código QR con la dirección para inscribirse en ese torneo (pedido del cliente, 14/10/2026). | HU-09 |
+| RF-36 | Mientras el torneo está en inscripción, la vista del proyector debe mostrar en grande el código del torneo y la dirección del juego, y la página del torneo debe permitir entrar escribiendo ese código; si no existe un torneo con ese código, debe avisarlo (pedido del cliente, 14/10/2026). | HU-09 |
 
 ## Fragmentos que NO son requerimientos funcionales
 
@@ -55,7 +55,6 @@
 | Identidad del jugador guardada por pestaña del navegador (`sessionStorage`) | Detalle técnico | Permite probar con dos pestañas en la misma computadora; no es una regla de negocio. |
 | Las librerías SockJS y STOMP se sirven desde el propio proyecto (`static/js/`) | Restricción técnica | Para que funcione sin internet en la red de la facultad. |
 | La aplicación se sirve por HTTPS con un certificado autofirmado (`src/main/resources/keystore.p12`, configurado en `application.properties`) | Restricción técnica | Muchos celulares (Safari desde iOS 18.2) no abren páginas "http"; con HTTPS alcanza con aceptar una vez el aviso del navegador. No cambia ninguna función del juego. |
-| El código QR se genera en el navegador con la librería qrcode-generator (MIT), guardada en `static/js/qrcode.js` | Restricción técnica | Igual que SockJS y STOMP: se sirve desde el proyecto para que funcione sin internet y sin instalar nada (F-16). |
 | F-16 · «Lo tienen que hacer sobre el mismo proyecto y con el mismo WebSocket que ya usa el juego. No se puede instalar nada nuevo en las máquinas.» | Restricción técnica | Impone la plataforma (este proyecto, el WebSocket existente) y prohíbe instalar software; no describe una función. |
 | F-17 · «Que sea rápido y que se pueda jugar cómodo desde el celular.» | Requisito no funcional (RNF) | Rendimiento y usabilidad sin métrica: «rápido» y «cómodo» no se pueden verificar con sí/no. |
 | F-18 · «El objetivo es que todo el curso juegue por lo menos tres partidas en la clase.» | Objetivo/meta de negocio (KPI) | Es un resultado esperado de la clase («el objetivo es…»); el sistema contribuye, pero no es una función. |

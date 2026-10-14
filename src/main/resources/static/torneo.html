@@ -41,8 +41,8 @@
         .lista-simple li { padding: 6px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; gap: 8px; }
         .campeon { text-align: center; }
         .campeon .titulo { font-size: 1.8em; font-weight: 800; color: #4a3b8f; }
-        .qr { display: flex; justify-content: center; margin: 12px 0; }
-        .qr svg { width: min(70vw, 260px); height: auto; }
+        .codigo-grande { text-align: center; font-size: 3em; font-weight: 800; letter-spacing: .15em; color: #4a3b8f; }
+        .input-codigo { text-align: center; font-size: 2em; font-weight: 700; letter-spacing: .3em; }
         .oculto { display: none; }
     </style>
 </head>
@@ -53,20 +53,20 @@
     <!-- sin id: crear o elegir torneo -->
     <div id="vistaInicio" class="oculto">
         <div class="card" style="text-align:center">
-            <h2>¿Sos el docente?</h2>
-            <p>Creá el torneo y compartí el código con el curso. Solo vos lo vas a poder iniciar, desde este navegador.</p>
-            <div class="acciones"><button class="btn" id="btnCrear">Crear torneo</button></div>
-        </div>
-        <div class="card">
-            <h2>Torneos con inscripción abierta</h2>
-            <ul id="listaTorneos" class="lista-partidas"></ul>
-            <label for="codigo">O pegá el código del torneo</label>
-            <input id="codigo" placeholder="Código del torneo">
+            <h2>Entrar a un torneo</h2>
+            <label for="codigo">Escribí el código que aparece en el proyector</label>
+            <input id="codigo" class="input-codigo" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off">
             <div class="acciones">
                 <button class="btn" id="btnIr">Entrar</button>
                 <a class="btn btn-secundario" href="index.html">Volver</a>
             </div>
             <div id="mensajeInicio" class="mensaje"></div>
+            <ul id="listaTorneos" class="lista-partidas" style="margin-top:16px;text-align:left"></ul>
+        </div>
+        <div class="card" style="text-align:center">
+            <h2>¿Sos el docente?</h2>
+            <p>Creá el torneo y pasale el código al curso. Solo vos lo vas a poder iniciar, desde este navegador.</p>
+            <div class="acciones"><button class="btn" id="btnCrear">Crear torneo</button></div>
         </div>
     </div>
 
@@ -74,9 +74,8 @@
     <div id="vistaTorneo" class="oculto">
         <div class="card" id="cardInscripcion">
             <h2>Inscripción</h2>
-            <p>Código del torneo:</p>
-            <p class="id-torneo" id="idTorneo"></p>
-            <div id="qrAdmin" class="qr oculto"></div>
+            <p style="text-align:center">Código del torneo:</p>
+            <p class="codigo-grande" id="idTorneo"></p>
             <div id="formInscripcion">
                 <label for="nombre">Tu nombre</label>
                 <input id="nombre" maxlength="20" placeholder="Ej.: Ana">
@@ -133,7 +132,6 @@
 
 <script src="js/sockjs.min.js"></script>
 <script src="js/stomp.min.js"></script>
-<script src="js/qrcode.js"></script>
 <script src="comun.js"></script>
 <script>
     const torneoId = new URLSearchParams(window.location.search).get('id');
@@ -160,20 +158,24 @@
             guardarClave(datos.torneo.id, datos.claveAdmin);
             window.location.href = 'torneo.html?id=' + encodeURIComponent(datos.torneo.id);
         });
-        $('btnIr').addEventListener('click', () => {
+        const entrar = async () => {
             const c = $('codigo').value.trim();
-            if (!c) { mostrarMensaje($('mensajeInicio'), 'Pegá el código del torneo', 'error'); return; }
+            if (!c) { mostrarMensaje($('mensajeInicio'), 'Escribí el código del torneo', 'error'); return; }
+            const resp = await fetch('/api/torneos/' + encodeURIComponent(c));
+            if (!resp.ok) { mostrarMensaje($('mensajeInicio'), 'No hay ningún torneo con el código ' + c, 'error'); return; }
             window.location.href = 'torneo.html?id=' + encodeURIComponent(c);
-        });
+        };
+        $('btnIr').addEventListener('click', entrar);
+        $('codigo').addEventListener('keydown', (e) => { if (e.key === 'Enter') entrar(); });
         const torneos = await fetch('/api/torneos').then(r => r.json());
         const abiertos = torneos.filter(t => t.estado === 'INSCRIPCION');
         const lista = $('listaTorneos');
         if (abiertos.length === 0) {
-            lista.innerHTML = '<li class="vacio">No hay torneos abiertos todavía.</li>';
+            lista.innerHTML = '';
         }
         for (const t of abiertos) {
             const li = document.createElement('li');
-            li.innerHTML = '<span><strong>Torneo</strong> · ' + esc(t.id.substring(0, 8)) + '</span><span>'
+            li.innerHTML = '<span>Torneo <strong>' + esc(t.id) + '</strong></span><span>'
                 + t.inscriptos.length + ' inscriptos</span>';
             li.addEventListener('click', () => { window.location.href = 'torneo.html?id=' + encodeURIComponent(t.id); });
             lista.appendChild(li);
@@ -249,13 +251,6 @@
         if (yo) $('yaInscripto').textContent = 'Estás inscripto como ' + yo.nombre + '. Esperá a que empiece el torneo.';
         const esAdmin = !!leerClave();
         mostrar('admin', esAdmin && t.estado === 'INSCRIPCION');
-        mostrar('qrAdmin', esAdmin && t.estado === 'INSCRIPCION');
-        if (esAdmin && !$('qrAdmin').innerHTML) {
-            const qr = qrcode(0, 'M');
-            qr.addData(window.location.origin + '/torneo.html?id=' + t.id);
-            qr.make();
-            $('qrAdmin').innerHTML = qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
-        }
         $('btnIniciar').disabled = t.inscriptos.length < t.minInscriptos;
         $('ayudaIniciar').textContent = t.inscriptos.length < t.minInscriptos
             ? 'Hacen falta al menos ' + t.minInscriptos + ' inscriptos para iniciar.' : 'Al iniciar se cierra la inscripción.';

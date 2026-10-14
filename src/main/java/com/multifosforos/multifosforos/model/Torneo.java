@@ -31,8 +31,9 @@ public class Torneo {
     private EstadoTorneo estado = EstadoTorneo.INSCRIPCION;
     private Equipo campeon;
 
-    public Torneo() {
-        this.id = UUID.randomUUID().toString();
+    /** id: el código corto con el que los alumnos entran al torneo (RF-14). */
+    public Torneo(String id) {
+        this.id = id;
         this.claveAdmin = UUID.randomUUID().toString();
         this.fechaCreacion = LocalDateTime.now();
     }

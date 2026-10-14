@@ -74,8 +74,8 @@
 
 | ID | Objetivo | Entrada | Resultado esperado | Referencia | Test |
 |----|----------|---------|----------------------|------------|------|
-| TC-30 | Crear un torneo | `crearTorneo()` | Estado "INSCRIPCION", id y clave no nulos, sin inscriptos | RF-14 | `TorneoServiceTest.tc30_crearTorneoQuedaEnInscripcion` |
-| TC-31 | Ids únicos | 100 torneos | 100 ids distintos | RF-14 | `TorneoServiceTest.tc31_cadaTorneoTieneIdUnico` |
+| TC-30 | Crear un torneo | `crearTorneo()` | Estado "INSCRIPCION", código de 4 números, clave no nula, sin inscriptos | RF-14 | `TorneoServiceTest.tc30_crearTorneoQuedaEnInscripcion` |
+| TC-31 | Códigos únicos | 100 torneos | 100 códigos distintos | RF-14 | `TorneoServiceTest.tc31_cadaTorneoTieneIdUnico` |
 
 ## UC-07: Inscribirse en el torneo
 
@@ -161,10 +161,10 @@
 
 ## Requerimientos del torneo sin test automático
 
-- **RF-36 (código QR)** es solo de la página: se verifica a mano
-  abriendo `proyector.html` con el torneo en inscripción y escaneando el
-  código con un celular, que tiene que abrir `torneo.html?id=…` de ese
-  torneo.
+- **RF-36 (entrar con el código)** es de las páginas: se verifica a mano
+  abriendo `proyector.html` con el torneo en inscripción (se ve el código
+  en grande) y, desde un celular, entrando a «Torneo» y escribiendo ese
+  código; con un código que no existe tiene que avisar.
 
 - **RF-27 (que se vea en el celular) y RF-32 (que el proyector se
   actualice solo)** dependen del WebSocket y de las páginas. Los tests

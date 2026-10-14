@@ -114,8 +114,8 @@ tener que recargar la página.
 se inscriba y juegue a la vez.
 
 **Criterios de aceptación:**
-- El torneo se crea en estado de inscripción, con un id único que puedo
-  compartir con el curso (F-02).
+- El torneo se crea en estado de inscripción, con un código único de 4
+  números que puedo compartir con el curso (F-02).
 - Quien crea el torneo es quien lo administra: recibe una clave que
   queda guardada en su navegador, y solo con esa clave se puede iniciar
   (F-02, aclaración del cliente).
@@ -133,8 +133,8 @@ se inscriba y juegue a la vez.
 - No se aceptan dos inscriptos con el mismo nombre (sin distinguir
   mayúsculas), ni el mismo alumno dos veces.
 - Una vez iniciado el torneo, nadie más se puede inscribir (F-02).
-- Puedo entrar al torneo escaneando un código QR que se muestra en el
-  proyector, sin escribir la dirección (pedido del cliente, 14/10/2026).
+- Puedo entrar al torneo escribiendo un código corto de 4 números que
+  se muestra en grande en el proyector (pedido del cliente, 14/10/2026).
 
 **Requerimientos:** RF-15, RF-16, RF-36
 
