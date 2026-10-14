@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multifósforos - Proyector</title>
+    <link rel="stylesheet" href="estilos.css">
+    <style>
+        .container { max-width: 1400px; padding: 16px; }
+        .card { padding: 20px; }
+        .barra { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; color: white;
+                 font-size: 1.3em; font-weight: 600; margin-bottom: 18px; }
+        .chip { display: inline-block; padding: 4px 12px; border-radius: 20px; background: rgba(255,255,255,.2); }
+        .chip.final { background: #f4b400; color: #3e2723; }
+        .grilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 16px; }
+        .partida { background: white; border-radius: 15px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+        .partida.terminada { opacity: .75; }
+        .lado { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding: 8px 10px;
+                border-radius: 10px; border: 3px solid transparent; }
+        .lado.turno { border-color: #f4b400; background: #fff8e1; }
+        .lado.gano { background: #e8f5e9; }
+        .lado .nombre { font-weight: 700; }
+        .lado .miembros { font-size: .8em; color: #777; }
+        .lado .cant { font-weight: 700; color: #4a3b8f; white-space: nowrap; }
+        .vs { text-align: center; color: #aaa; font-size: .85em; margin: 2px 0; }
+        .mesa { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; padding: 12px 6px; min-height: 52px;
+                background: #3e2723; border-radius: 10px; margin: 10px 0; }
+        .fosforo { width: 6px; height: 34px; background: #f5deb3; border-radius: 2px; position: relative; }
+        .fosforo::before { content: ''; position: absolute; top: -4px; left: -2px; width: 10px; height: 11px;
+                           background: #c62828; border-radius: 50% 50% 45% 45%; }
+        .datos { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; font-size: .9em; color: #555; }
+        .minimax { margin-top: 10px; padding: 8px 10px; border-radius: 8px; background: #e8eaff; color: #4a3b8f; font-weight: 600; text-align: center; }
+        .votacion { margin-top: 8px; font-size: .9em; text-align: center; color: #555; }
+        .votacion .seg { color: #c62828; font-weight: 800; }
+        .resultado { margin-top: 10px; text-align: center; font-weight: 700; color: #256029; }
+        .columnas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; margin-top: 16px; }
+        .lista-simple { list-style: none; }
+        .lista-simple li { padding: 6px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; gap: 8px; }
+        .nombres { display: flex; flex-wrap: wrap; gap: 8px; }
+        .nombres span { padding: 8px 14px; border-radius: 20px; background: #f0f0f5; color: #4a3b8f; font-weight: 600; font-size: 1.1em; }
+        .grande { text-align: center; }
+        .grande .titulo { font-size: 2.4em; font-weight: 800; color: #4a3b8f; margin: 8px 0 16px; }
+        .link { font-family: monospace; background: #f0f0f5; padding: 10px; border-radius: 6px; word-break: break-all; text-align: center; font-size: 1.1em; }
+        .qr { display: flex; justify-content: center; margin: 10px 0 16px; }
+        .qr svg { width: min(80vw, 380px); height: auto; background: white; }
+        .oculto { display: none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header"><h1>Torneo de fósforos</h1></div>
+    <div id="mensaje" class="mensaje"></div>
+
+    <div id="vistaInscripcion" class="oculto">
+        <div class="card grande">
+            <h2>Escaneá el código con el celular para inscribirte</h2>
+            <div class="qr" id="qr"></div>
+            <p>o entrá a esta dirección:</p>
+            <p class="link" id="linkInscripcion"></p>
+            <h2 style="margin-top:20px">Inscriptos (<span id="cantInscriptos">0</span>)</h2>
+            <div class="nombres" id="inscriptos" style="justify-content:center"></div>
+        </div>
+    </div>
+
+    <div id="vistaRonda" class="oculto">
+        <div class="barra" id="barra"></div>
+        <div class="grilla" id="grilla"></div>
+        <div class="columnas">
+            <div class="card">
+                <h2>Siguen en el torneo</h2>
+                <ul class="lista-simple" id="participantes"></ul>
+            </div>
+            <div class="card" id="cardEliminados">
+                <h2>Eliminados por la máquina</h2>
+                <ul class="lista-simple" id="eliminados"></ul>
+            </div>
+        </div>
+    </div>
+
+    <div id="vistaCampeon" class="oculto">
+        <div class="card grande">
+            <div style="font-size:3em">🏆</div>
+            <div>Equipo campeón</div>
+            <div class="titulo" id="nombreCampeon"></div>
+            <div class="nombres" id="integrantesCampeon" style="justify-content:center"></div>
+        </div>
+    </div>
+</div>
+
+<script src="js/sockjs.min.js"></script>
+<script src="js/stomp.min.js"></script>
+<script src="js/qrcode.js"></script>
+<script src="comun.js"></script>
+<script>
+    const torneoId = new URLSearchParams(window.location.search).get('id');
+    const $ = (id) => document.getElementById(id);
+    const mostrar = (id, si) => $(id).classList.toggle('oculto', !si);
+    let finVotaciones = {};
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+
+    function conectar() {
+        const stompClient = Stomp.over(new SockJS('/ws'));
+        stompClient.debug = null;
+        stompClient.connect({}, () => {
+            stompClient.subscribe('/topic/torneo/' + torneoId, (frame) => {
+                const msg = JSON.parse(frame.body);
+                if (msg.tipo === 'ESTADO') render(msg.torneo);
+            });
+            fetch('/api/torneos/' + encodeURIComponent(torneoId))
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .then(render)
+                .catch(() => mostrarMensaje($('mensaje'), 'El torneo no existe', 'error'));
+        }, () => mostrarMensaje($('mensaje'), 'Se perdió la conexión. Recargá la página.', 'error'));
+        setInterval(actualizarCuentas, 250);
+    }
+
+    function render(t) {
+        mostrar('vistaInscripcion', t.estado === 'INSCRIPCION');
+        mostrar('vistaRonda', t.estado === 'EN_CURSO');
+        mostrar('vistaCampeon', t.estado === 'TERMINADO');
+
+        if (t.estado === 'INSCRIPCION') {
+            const link = window.location.origin + '/torneo.html?id=' + t.id;
+            if ($('linkInscripcion').textContent !== link) {
+                $('linkInscripcion').textContent = link;
+                $('qr').innerHTML = codigoQR(link);
+            }
+            $('cantInscriptos').textContent = t.inscriptos.length;
+            $('inscriptos').innerHTML = t.inscriptos.map(i => '<span>' + esc(i.nombre) + '</span>').join('')
+                || '<em class="vacio">Esperando inscriptos…</em>';
+        } else if (t.estado === 'EN_CURSO') {
+            renderRonda(t);
+        } else {
+            $('nombreCampeon').textContent = t.campeon.nombre;
+            $('integrantesCampeon').innerHTML = t.campeon.maquina ? '<span>MIN-MAX</span>'
+                : t.campeon.integrantes.map(i => '<span>' + esc(i.nombre) + (i.id === t.campeon.capitanId ? ' ★' : '') + '</span>').join('');
+        }
+    }
+
+    /** Código QR (SVG) con la dirección para inscribirse (RF-36). */
+    function codigoQR(texto) {
+        const qr = qrcode(0, 'M');
+        qr.addData(texto);
+        qr.make();
+        return qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true });
+    }
+
+    function lado(e, p) {
+        const clases = ['lado'];
+        if (p.turnoEquipoId === e.id) clases.push('turno');
+        if (p.ganadorEquipoId === e.id) clases.push('gano');
+        const miembros = e.maquina ? 'MIN-MAX' : e.integrantes.map(i => esc(i.nombre)).join(', ');
+        return '<div class="' + clases.join(' ') + '"><div><div class="nombre">' + esc(e.nombre) + '</div>'
+            + '<div class="miembros">' + miembros + '</div></div>'
+            + '<div class="cant">' + (e.maquina ? '🤖' : e.integrantes.length + ' 👤') + '</div></div>';
+    }
+
+    function renderRonda(t) {
+        const r = t.ronda;
+        const enJuego = r.partidas.filter(p => p.estado === 'EN_JUEGO').length;
+        $('barra').innerHTML = (r.esFinal ? '<span class="chip final">FINAL</span>' : '')
+            + '<span class="chip">Ronda ' + r.numero + '</span>'
+            + '<span class="chip">' + r.fosforos + ' fósforos · de 1 a ' + r.maxQuitar + '</span>'
+            + '<span class="chip">' + enJuego + ' de ' + r.partidas.length + ' partidas en juego</span>';
+
+        finVotaciones = {};
+        $('grilla').innerHTML = r.partidas.map((p, idx) => {
+            const nombre = (id) => id === p.equipoA.id ? p.equipoA.nombre : p.equipoB.nombre;
+            let pie = '';
+            if (p.estado === 'TERMINADA') {
+                pie = '<div class="resultado">Ganó ' + esc(nombre(p.ganadorEquipoId)) + '</div>';
+            } else {
+                pie = '<div class="minimax">Posición ganadora (MIN-MAX): ' + esc(nombre(p.posicionGanadoraEquipoId)) + '</div>';
+                const v = p.votacion;
+                if (v && v.cerrada) {
+                    pie += '<div class="votacion">' + esc(nombre(v.equipoId)) + ' eligió <strong>sacar ' + v.jugadaElegida + '</strong></div>';
+                } else if (v) {
+                    finVotaciones[idx] = Date.now() + v.msRestantes;
+                    const conteo = Object.entries(v.conteo)
+                        .map(([q, n]) => 'sacar ' + q + ': ' + n + (n === 1 ? ' voto' : ' votos')).join(' · ');
+                    pie += '<div class="votacion">Vota ' + esc(nombre(v.equipoId)) + ': <span class="seg" data-idx="' + idx + '"></span>'
+                        + (conteo ? '<br>' + conteo : '') + '</div>';
+                }
+            }
+            let mesa = '';
+            for (let i = 0; i < p.fosforosRestantes; i++) mesa += '<div class="fosforo"></div>';
+            return '<div class="partida' + (p.estado === 'TERMINADA' ? ' terminada' : '') + '">'
+                + lado(p.equipoA, p) + '<div class="vs">vs</div>' + lado(p.equipoB, p)
+                + '<div class="mesa">' + mesa + '</div>'
+                + '<div class="datos"><span>Quedan <strong>' + p.fosforosRestantes + '</strong></span><span>'
+                + p.historial.length + ' jugadas</span></div>' + pie + '</div>';
+        }).join('');
+        actualizarCuentas();
+
+        $('participantes').innerHTML = t.participantes.map(e => '<li><span>' + esc(e.nombre) + '</span><span>'
+            + (e.maquina ? 'máquina' : e.integrantes.length + ' integrantes') + '</span></li>').join('');
+        mostrar('cardEliminados', t.eliminados.length > 0);
+        $('eliminados').innerHTML = t.eliminados.map(i => '<li>' + esc(i.nombre) + '</li>').join('');
+    }
+
+    function actualizarCuentas() {
+        document.querySelectorAll('.seg').forEach(el => {
+            const fin = finVotaciones[el.dataset.idx];
+            el.textContent = fin ? Math.max(0, Math.ceil((fin - Date.now()) / 1000)) + ' s' : '';
+        });
+    }
+
+    if (!torneoId) {
+        mostrarMensaje($('mensaje'), 'Falta el código del torneo. Abrí el proyector desde la página del torneo.', 'error');
+    } else {
+        conectar();
+    }
+</script>
+</body>
+</html>

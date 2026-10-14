@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multifósforos - Partida</title>
+    <link rel="stylesheet" href="estilos.css">
+    <style>
+        .jugadores { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        .jugador {
+            flex: 1; min-width: 180px; padding: 14px; border-radius: 10px; border: 3px solid #eee; text-align: center;
+        }
+        .jugador.turno { border-color: #f4b400; background: #fff8e1; }
+        .jugador .nombre { font-weight: 700; font-size: 1.15em; }
+        .jugador .rol { font-size: .85em; color: #777; }
+        .estado { text-align: center; font-size: 1.2em; font-weight: 600; margin: 18px 0 6px; }
+        .contador { text-align: center; font-size: 3em; font-weight: 800; color: #4a3b8f; }
+        .mesa {
+            display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+            padding: 20px; min-height: 90px; background: #3e2723; border-radius: 12px; margin: 14px 0;
+        }
+        .fosforo { width: 8px; height: 60px; background: #f5deb3; border-radius: 3px; position: relative; }
+        .fosforo::before {
+            content: ''; position: absolute; top: -6px; left: -3px; width: 14px; height: 16px;
+            background: #c62828; border-radius: 50% 50% 45% 45%;
+        }
+        .fosforo.marcado { opacity: .35; }
+        .botones { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .botones .btn { min-width: 110px; }
+        .historial { list-style: none; max-height: 220px; overflow-y: auto; }
+        .historial li { padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
+        .id-partida { font-family: monospace; background: #f0f0f5; padding: 8px; border-radius: 6px; word-break: break-all; }
+        .resultado { text-align: center; font-size: 1.6em; font-weight: 800; padding: 16px; border-radius: 10px; display: none; }
+        .resultado.gane { display: block; background: #e8f5e9; color: #256029; }
+        .resultado.perdi { display: block; background: #fdecea; color: #a12622; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header"><h1>Multifósforos</h1><p id="reglas"></p></div>
+
+    <div class="card">
+        <div class="jugadores" id="jugadores"></div>
+        <div class="estado" id="estado">Conectando…</div>
+        <div class="contador" id="contador"></div>
+        <div class="mesa" id="mesa"></div>
+        <div class="botones" id="botones"></div>
+        <div id="mensaje" class="mensaje"></div>
+        <div id="resultado" class="resultado"></div>
+    </div>
+
+    <div class="card" id="cardEspera" style="display:none">
+        <h2>Esperando rival</h2>
+        <p>Pasale este id a tu rival para que se una desde «Unirse a una partida»:</p>
+        <p class="id-partida" id="idPartida"></p>
+    </div>
+
+    <div class="card">
+        <h2>Jugadas</h2>
+        <ul class="historial" id="historial"><li class="vacio">Todavía no hay jugadas.</li></ul>
+        <div class="acciones"><a class="btn btn-secundario" href="index.html">Volver al inicio</a></div>
+    </div>
+</div>
+
+<script src="js/sockjs.min.js"></script>
+<script src="js/stomp.min.js"></script>
+<script src="comun.js"></script>
+<script>
+    const partidaId = new URLSearchParams(window.location.search).get('id');
+    const miId = obtenerJugadorId();
+    let partida = null;
+    let stompClient = null;
+
+    function conectar() {
+        stompClient = Stomp.over(new SockJS('/ws'));
+        stompClient.debug = null;
+        stompClient.connect({}, () => {
+            stompClient.subscribe('/topic/partida/' + partidaId, (frame) => {
+                const msg = JSON.parse(frame.body);
+                if (msg.tipo === 'ESTADO') {
+                    mostrarEstado(msg.partida);
+                } else if (msg.tipo === 'ERROR' && msg.jugadorId === miId) {
+                    mostrarMensaje(document.getElementById('mensaje'), msg.error, 'error');
+                }
+            });
+            // estado inicial (por si nos perdimos mensajes antes de suscribirnos)
+            fetch('/api/partidas/' + encodeURIComponent(partidaId))
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .then(render)
+                .catch(() => { document.getElementById('estado').textContent = 'La partida no existe'; });
+        }, () => {
+            document.getElementById('estado').textContent = 'Se perdió la conexión. Recargá la página.';
+        });
+    }
+
+    // Si llegan juntas la jugada del humano y la respuesta de la máquina, se muestran de a una:
+    // primero la del humano, y un momento después la de la máquina, con un aviso.
+    let respuestaPendiente = null;
+    function mostrarEstado(p) {
+        clearTimeout(respuestaPendiente);
+        const antes = partida ? partida.historial.length : p.historial.length;
+        const nuevas = p.historial.slice(antes);
+        const maquina = p.jugadores.find(j => j.maquina);
+        const ultima = nuevas[nuevas.length - 1];
+        if (maquina && nuevas.length === 2 && ultima.jugadorId === maquina.id) {
+            render(Object.assign({}, p, {
+                historial: p.historial.slice(0, -1),
+                fosforosRestantes: nuevas[0].fosforosDespues,
+                estado: 'EN_JUEGO', turnoJugadorId: maquina.id, ganadorId: null, perdedorId: null
+            }));
+            document.getElementById('estado').textContent = 'La máquina está pensando…';
+            respuestaPendiente = setTimeout(() => {
+                render(p);
+                mostrarMensaje(document.getElementById('mensaje'),
+                    'La máquina sacó ' + ultima.cantidad + (ultima.cantidad === 1 ? ' fósforo' : ' fósforos'), 'ok');
+            }, 1200);
+        } else {
+            render(p);
+        }
+    }
+
+    function sacar(cantidad) {
+        document.getElementById('mensaje').className = 'mensaje';
+        stompClient.send('/app/partida/jugada', {}, JSON.stringify({
+            partidaId: partidaId, jugadorId: miId, cantidad: cantidad
+        }));
+    }
+
+    function nombreDe(id) {
+        const j = partida.jugadores.find(x => x.id === id);
+        return j ? (j.id === miId ? 'Vos' : j.nombre) : id;
+    }
+
+    function render(p) {
+        partida = p;
+        document.getElementById('reglas').textContent =
+            p.fosforosIniciales + ' fósforos · se saca de 1 a ' + p.maxQuitar + ' · pierde quien se lleva el último';
+
+        // jugadores
+        const cont = document.getElementById('jugadores');
+        cont.innerHTML = '';
+        for (const j of p.jugadores) {
+            const div = document.createElement('div');
+            div.className = 'jugador' + (j.id === p.turnoJugadorId ? ' turno' : '');
+            div.innerHTML = '<div class="nombre">' + j.nombre + (j.id === miId ? ' (vos)' : '') + '</div>'
+                + '<div class="rol">' + (j.maquina ? 'MIN-MAX' : 'Humano') + '</div>';
+            cont.appendChild(div);
+        }
+
+        // mesa
+        document.getElementById('contador').textContent = p.fosforosRestantes;
+        const mesa = document.getElementById('mesa');
+        mesa.innerHTML = '';
+        for (let i = 0; i < p.fosforosRestantes; i++) {
+            const f = document.createElement('div');
+            f.className = 'fosforo';
+            mesa.appendChild(f);
+        }
+
+        // estado y botones
+        const estado = document.getElementById('estado');
+        const botones = document.getElementById('botones');
+        botones.innerHTML = '';
+        document.getElementById('cardEspera').style.display = p.estado === 'ESPERANDO' ? 'block' : 'none';
+        document.getElementById('idPartida').textContent = p.id;
+
+        if (p.estado === 'ESPERANDO') {
+            estado.textContent = 'Esperando que se una el rival…';
+        } else if (p.estado === 'EN_JUEGO') {
+            const miTurno = p.turnoJugadorId === miId;
+            estado.textContent = miTurno ? 'Es tu turno' : 'Juega ' + nombreDe(p.turnoJugadorId);
+            for (let q = 1; q <= p.maxQuitar; q++) {
+                const b = document.createElement('button');
+                b.className = 'btn';
+                b.textContent = 'Sacar ' + q;
+                b.disabled = !miTurno || q > p.fosforosRestantes;
+                b.addEventListener('click', () => sacar(q));
+                b.addEventListener('mouseenter', () => marcar(q));
+                b.addEventListener('mouseleave', () => marcar(0));
+                botones.appendChild(b);
+            }
+        } else if (p.estado === 'TERMINADA') {
+            estado.textContent = 'Partida terminada: ' + nombreDe(p.perdedorId) + ' se llevó el último fósforo';
+            const res = document.getElementById('resultado');
+            const participo = p.jugadores.some(j => j.id === miId);
+            if (participo) {
+                const gane = p.ganadorId === miId;
+                res.textContent = gane ? '¡Ganaste!' : 'Perdiste';
+                res.className = 'resultado ' + (gane ? 'gane' : 'perdi');
+            }
+        }
+
+        // historial
+        const hist = document.getElementById('historial');
+        hist.innerHTML = '';
+        if (p.historial.length === 0) {
+            hist.innerHTML = '<li class="vacio">Todavía no hay jugadas.</li>';
+        }
+        p.historial.forEach((j, i) => {
+            const li = document.createElement('li');
+            li.textContent = (i + 1) + '. ' + (j.jugadorId === miId ? 'Sacaste ' : j.nombre + ' sacó ') + j.cantidad
+                + ' → quedan ' + j.fosforosDespues;
+            hist.appendChild(li);
+        });
+    }
+
+    function marcar(q) {
+        const fs = document.querySelectorAll('#mesa .fosforo');
+        fs.forEach((f, i) => f.classList.toggle('marcado', i >= fs.length - q));
+    }
+
+    if (!partidaId) {
+        document.getElementById('estado').textContent = 'Falta el id de la partida';
+    } else {
+        conectar();
+    }
+</script>
+</body>
+</html>

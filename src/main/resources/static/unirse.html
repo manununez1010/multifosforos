@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multifósforos - Unirse</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<div class="container">
+    <div class="header"><h1>Unirse a una partida</h1></div>
+    <div class="card">
+        <label for="nombre">Tu nombre</label>
+        <input id="nombre" maxlength="20" placeholder="Ej.: Beto">
+
+        <label for="partidaId">Id de la partida</label>
+        <input id="partidaId" placeholder="Pegá el id o elegí una de la lista">
+
+        <div class="acciones">
+            <button class="btn" id="btnUnirse">Unirse</button>
+            <a class="btn btn-secundario" href="index.html">Volver</a>
+        </div>
+        <div id="mensaje" class="mensaje"></div>
+    </div>
+    <div class="card">
+        <h2>Partidas esperando rival</h2>
+        <ul id="lista" class="lista-partidas"></ul>
+        <button class="btn btn-secundario" id="btnRefrescar">Actualizar</button>
+    </div>
+</div>
+<script src="comun.js"></script>
+<script>
+    document.getElementById('nombre').value = sessionStorage.getItem('nombre') || '';
+
+    async function cargarDisponibles() {
+        const lista = document.getElementById('lista');
+        const partidas = await fetch('/api/partidas/disponibles').then(r => r.json());
+        lista.innerHTML = '';
+        if (partidas.length === 0) {
+            lista.innerHTML = '<li class="vacio">No hay partidas esperando. Creá una.</li>';
+            return;
+        }
+        for (const p of partidas) {
+            const li = document.createElement('li');
+            const creador = p.jugadores.length > 0 ? p.jugadores[0].nombre : '—';
+            li.innerHTML = '<span><strong>' + creador + '</strong> espera rival</span>'
+                + '<span>' + p.fosforosIniciales + ' fósforos · hasta ' + p.maxQuitar + '</span>';
+            li.addEventListener('click', () => { document.getElementById('partidaId').value = p.id; });
+            lista.appendChild(li);
+        }
+    }
+
+    document.getElementById('btnRefrescar').addEventListener('click', cargarDisponibles);
+
+    document.getElementById('btnUnirse').addEventListener('click', async () => {
+        const msg = document.getElementById('mensaje');
+        const nombre = document.getElementById('nombre').value.trim();
+        const partidaId = document.getElementById('partidaId').value.trim();
+        if (!nombre || !partidaId) { mostrarMensaje(msg, 'Completá tu nombre y el id de la partida', 'error'); return; }
+        try {
+            await unirseAPartida(partidaId, nombre);
+            window.location.href = 'juego.html?id=' + encodeURIComponent(partidaId);
+        } catch (e) {
+            mostrarMensaje(msg, e.message, 'error');
+        }
+    });
+
+    cargarDisponibles();
+</script>
+</body>
+</html>

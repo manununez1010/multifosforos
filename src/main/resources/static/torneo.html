@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multifósforos - Torneo</title>
+    <link rel="stylesheet" href="estilos.css">
+    <style>
+        .container { padding: 16px; }
+        .card { padding: 22px; }
+        .id-torneo { font-family: monospace; background: #f0f0f5; padding: 8px; border-radius: 6px; word-break: break-all; }
+        .chip { display: inline-block; padding: 4px 10px; border-radius: 20px; background: #f0f0f5; color: #4a3b8f;
+                font-size: .85em; font-weight: 600; margin: 3px 4px 3px 0; }
+        .chip.final { background: #fff3cd; color: #8a6d00; }
+        .chip.yo { background: #e8eaff; }
+        .ronda { text-align: center; font-weight: 600; color: #4a3b8f; margin-bottom: 10px; }
+        .equipos { display: flex; gap: 10px; flex-wrap: wrap; }
+        .equipo { flex: 1; min-width: 140px; padding: 12px; border-radius: 10px; border: 3px solid #eee; text-align: center; }
+        .equipo.turno { border-color: #f4b400; background: #fff8e1; }
+        .equipo .nombre { font-weight: 700; }
+        .equipo .integrantes { font-size: .85em; color: #666; margin-top: 4px; }
+        .estado { text-align: center; font-size: 1.15em; font-weight: 600; margin: 16px 0 4px; }
+        .cuenta { text-align: center; font-size: 2.2em; font-weight: 800; color: #c62828; }
+        .contador { text-align: center; font-size: 2.6em; font-weight: 800; color: #4a3b8f; }
+        .mesa { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 18px 10px;
+                min-height: 80px; background: #3e2723; border-radius: 12px; margin: 12px 0; }
+        .fosforo { width: 8px; height: 54px; background: #f5deb3; border-radius: 3px; position: relative; }
+        .fosforo::before { content: ''; position: absolute; top: -6px; left: -3px; width: 14px; height: 16px;
+                           background: #c62828; border-radius: 50% 50% 45% 45%; }
+        .fosforo.marcado { opacity: .3; }
+        .votos { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 10px; }
+        .votos .btn { margin-top: 0; padding: 16px 8px; font-size: 1.1em; }
+        .votos .btn.elegido { outline: 4px solid #f4b400; }
+        .conteo { text-align: center; margin-top: 10px; color: #555; }
+        .elegida { text-align: center; font-size: 1.4em; font-weight: 800; padding: 14px; border-radius: 10px;
+                   background: #fff8e1; color: #8a6d00; margin-top: 12px; }
+        .aviso { text-align: center; padding: 14px; border-radius: 10px; background: #f0f0f5; color: #4a3b8f; font-weight: 600; }
+        .aviso.bien { background: #e8f5e9; color: #256029; }
+        .aviso.mal { background: #fdecea; color: #a12622; }
+        .lista-simple { list-style: none; }
+        .lista-simple li { padding: 6px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; gap: 8px; }
+        .campeon { text-align: center; }
+        .campeon .titulo { font-size: 1.8em; font-weight: 800; color: #4a3b8f; }
+        .qr { display: flex; justify-content: center; margin: 12px 0; }
+        .qr svg { width: min(70vw, 260px); height: auto; }
+        .oculto { display: none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header"><h1>Torneo</h1><p>Si perdés, te sumás al equipo que te ganó. Los equipos votan cada jugada.</p></div>
+
+    <!-- sin id: crear o elegir torneo -->
+    <div id="vistaInicio" class="oculto">
+        <div class="card" style="text-align:center">
+            <h2>¿Sos el docente?</h2>
+            <p>Creá el torneo y compartí el código con el curso. Solo vos lo vas a poder iniciar, desde este navegador.</p>
+            <div class="acciones"><button class="btn" id="btnCrear">Crear torneo</button></div>
+        </div>
+        <div class="card">
+            <h2>Torneos con inscripción abierta</h2>
+            <ul id="listaTorneos" class="lista-partidas"></ul>
+            <label for="codigo">O pegá el código del torneo</label>
+            <input id="codigo" placeholder="Código del torneo">
+            <div class="acciones">
+                <button class="btn" id="btnIr">Entrar</button>
+                <a class="btn btn-secundario" href="index.html">Volver</a>
+            </div>
+            <div id="mensajeInicio" class="mensaje"></div>
+        </div>
+    </div>
+
+    <!-- con id -->
+    <div id="vistaTorneo" class="oculto">
+        <div class="card" id="cardInscripcion">
+            <h2>Inscripción</h2>
+            <p>Código del torneo:</p>
+            <p class="id-torneo" id="idTorneo"></p>
+            <div id="qrAdmin" class="qr oculto"></div>
+            <div id="formInscripcion">
+                <label for="nombre">Tu nombre</label>
+                <input id="nombre" maxlength="20" placeholder="Ej.: Ana">
+                <div class="acciones"><button class="btn" id="btnInscribirme">Inscribirme</button></div>
+            </div>
+            <div id="yaInscripto" class="aviso bien oculto"></div>
+            <div id="admin" class="oculto">
+                <div class="acciones">
+                    <button class="btn" id="btnIniciar">Iniciar torneo</button>
+                    <a class="btn btn-secundario" id="linkProyector" target="_blank">Abrir vista del proyector</a>
+                </div>
+                <div class="ayuda" style="text-align:center" id="ayudaIniciar"></div>
+            </div>
+            <h2 style="margin-top:20px">Inscriptos (<span id="cantInscriptos">0</span>)</h2>
+            <div id="inscriptos"></div>
+        </div>
+
+        <div class="card oculto" id="cardJuego">
+            <div class="ronda" id="ronda"></div>
+            <div id="miSituacion"></div>
+            <div id="miPartida" class="oculto">
+                <div class="equipos" id="equipos"></div>
+                <div class="estado" id="estado"></div>
+                <div class="cuenta" id="cuenta"></div>
+                <div class="contador" id="contador"></div>
+                <div class="mesa" id="mesa"></div>
+                <div class="votos" id="votos"></div>
+                <div class="conteo" id="conteo"></div>
+                <div id="elegida"></div>
+            </div>
+        </div>
+
+        <div class="card oculto" id="cardCampeon">
+            <div class="campeon">
+                <div>🏆 Equipo campeón</div>
+                <div class="titulo" id="nombreCampeon"></div>
+                <div id="campeonYo"></div>
+                <ul class="lista-simple" id="integrantesCampeon" style="margin-top:12px"></ul>
+            </div>
+        </div>
+
+        <div class="card oculto" id="cardHistorial">
+            <h2>Jugadas de tu partida</h2>
+            <ul class="lista-simple" id="historial"></ul>
+        </div>
+
+        <div id="mensaje" class="mensaje"></div>
+        <div class="acciones" style="margin-bottom:20px">
+            <a class="btn btn-secundario" id="linkProyector2" target="_blank">Ver proyector</a>
+            <a class="btn btn-secundario" href="index.html">Inicio</a>
+        </div>
+    </div>
+</div>
+
+<script src="js/sockjs.min.js"></script>
+<script src="js/stomp.min.js"></script>
+<script src="js/qrcode.js"></script>
+<script src="comun.js"></script>
+<script>
+    const torneoId = new URLSearchParams(window.location.search).get('id');
+    const miId = obtenerJugadorId();
+    let torneo = null;
+    let stompClient = null;
+    let miVoto = null;          // lo que voté en la votación abierta
+    let claveVotacion = null;   // para saber cuándo empieza una votación nueva
+    let finVotacion = 0;
+
+    const $ = (id) => document.getElementById(id);
+    const mostrar = (id, si) => $(id).classList.toggle('oculto', !si);
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+    function leerClave() { try { return localStorage.getItem('claveAdmin_' + torneoId); } catch (e) { return null; } }
+    function guardarClave(id, clave) { try { localStorage.setItem('claveAdmin_' + id, clave); } catch (e) { } }
+
+    // ---------- sin id ----------
+    async function vistaInicio() {
+        mostrar('vistaInicio', true);
+        $('btnCrear').addEventListener('click', async () => {
+            const resp = await fetch('/api/torneos', { method: 'POST' });
+            const datos = await resp.json();
+            guardarClave(datos.torneo.id, datos.claveAdmin);
+            window.location.href = 'torneo.html?id=' + encodeURIComponent(datos.torneo.id);
+        });
+        $('btnIr').addEventListener('click', () => {
+            const c = $('codigo').value.trim();
+            if (!c) { mostrarMensaje($('mensajeInicio'), 'Pegá el código del torneo', 'error'); return; }
+            window.location.href = 'torneo.html?id=' + encodeURIComponent(c);
+        });
+        const torneos = await fetch('/api/torneos').then(r => r.json());
+        const abiertos = torneos.filter(t => t.estado === 'INSCRIPCION');
+        const lista = $('listaTorneos');
+        if (abiertos.length === 0) {
+            lista.innerHTML = '<li class="vacio">No hay torneos abiertos todavía.</li>';
+        }
+        for (const t of abiertos) {
+            const li = document.createElement('li');
+            li.innerHTML = '<span><strong>Torneo</strong> · ' + esc(t.id.substring(0, 8)) + '</span><span>'
+                + t.inscriptos.length + ' inscriptos</span>';
+            li.addEventListener('click', () => { window.location.href = 'torneo.html?id=' + encodeURIComponent(t.id); });
+            lista.appendChild(li);
+        }
+    }
+
+    // ---------- con id ----------
+    function conectar() {
+        mostrar('vistaTorneo', true);
+        $('idTorneo').textContent = torneoId;
+        $('linkProyector').href = 'proyector.html?id=' + encodeURIComponent(torneoId);
+        $('linkProyector2').href = 'proyector.html?id=' + encodeURIComponent(torneoId);
+        $('nombre').value = sessionStorage.getItem('nombre') || '';
+        $('btnInscribirme').addEventListener('click', inscribirme);
+        $('btnIniciar').addEventListener('click', iniciar);
+
+        stompClient = Stomp.over(new SockJS('/ws'));
+        stompClient.debug = null;
+        stompClient.connect({}, () => {
+            stompClient.subscribe('/topic/torneo/' + torneoId, (frame) => {
+                const msg = JSON.parse(frame.body);
+                if (msg.tipo === 'ESTADO') render(msg.torneo);
+                else if (msg.tipo === 'ERROR' && msg.jugadorId === miId) mostrarMensaje($('mensaje'), msg.error, 'error');
+            });
+            fetch('/api/torneos/' + encodeURIComponent(torneoId))
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .then(render)
+                .catch(() => { mostrarMensaje($('mensaje'), 'El torneo no existe', 'error'); mostrar('cardInscripcion', false); });
+        }, () => mostrarMensaje($('mensaje'), 'Se perdió la conexión. Recargá la página.', 'error'));
+        setInterval(actualizarCuenta, 250);
+    }
+
+    async function inscribirme() {
+        const nombre = $('nombre').value.trim();
+        if (!nombre) { mostrarMensaje($('mensaje'), 'Ingresá tu nombre', 'error'); return; }
+        const resp = await fetch('/api/torneos/' + encodeURIComponent(torneoId) + '/inscriptos', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jugadorId: miId, nombre: nombre })
+        });
+        const datos = await resp.json().catch(() => ({}));
+        if (!resp.ok) { mostrarMensaje($('mensaje'), datos.error || 'No te pudiste inscribir', 'error'); return; }
+        sessionStorage.setItem('nombre', nombre);
+        $('mensaje').className = 'mensaje';
+        render(datos);
+    }
+
+    async function iniciar() {
+        const resp = await fetch('/api/torneos/' + encodeURIComponent(torneoId) + '/iniciar', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ claveAdmin: leerClave() })
+        });
+        const datos = await resp.json().catch(() => ({}));
+        if (!resp.ok) { mostrarMensaje($('mensaje'), datos.error || 'No se pudo iniciar', 'error'); return; }
+        render(datos);
+    }
+
+    function votar(q) {
+        $('mensaje').className = 'mensaje';
+        miVoto = q;
+        stompClient.send('/app/torneo/voto', {}, JSON.stringify({ torneoId: torneoId, jugadorId: miId, cantidad: q }));
+        render(torneo);
+    }
+
+    // ---------- render ----------
+    function render(t) {
+        torneo = t;
+        const yo = t.inscriptos.find(i => i.id === miId);
+
+        // inscripción
+        mostrar('cardInscripcion', t.estado === 'INSCRIPCION');
+        mostrar('formInscripcion', t.estado === 'INSCRIPCION' && !yo);
+        mostrar('yaInscripto', !!yo);
+        if (yo) $('yaInscripto').textContent = 'Estás inscripto como ' + yo.nombre + '. Esperá a que empiece el torneo.';
+        const esAdmin = !!leerClave();
+        mostrar('admin', esAdmin && t.estado === 'INSCRIPCION');
+        mostrar('qrAdmin', esAdmin && t.estado === 'INSCRIPCION');
+        if (esAdmin && !$('qrAdmin').innerHTML) {
+            const qr = qrcode(0, 'M');
+            qr.addData(window.location.origin + '/torneo.html?id=' + t.id);
+            qr.make();
+            $('qrAdmin').innerHTML = qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
+        }
+        $('btnIniciar').disabled = t.inscriptos.length < t.minInscriptos;
+        $('ayudaIniciar').textContent = t.inscriptos.length < t.minInscriptos
+            ? 'Hacen falta al menos ' + t.minInscriptos + ' inscriptos para iniciar.' : 'Al iniciar se cierra la inscripción.';
+        $('cantInscriptos').textContent = t.inscriptos.length;
+        $('inscriptos').innerHTML = t.inscriptos.length === 0 ? '<span class="vacio">Todavía no hay nadie.</span>'
+            : t.inscriptos.map(i => '<span class="chip' + (i.id === miId ? ' yo' : '') + '">' + esc(i.nombre) + '</span>').join('');
+
+        // juego
+        mostrar('cardJuego', t.estado === 'EN_CURSO');
+        mostrar('cardCampeon', t.estado === 'TERMINADO');
+        mostrar('cardHistorial', false);
+        if (t.estado === 'EN_CURSO') renderJuego(t, yo);
+        if (t.estado === 'TERMINADO') renderCampeon(t);
+    }
+
+    function renderJuego(t, yo) {
+        const r = t.ronda;
+        $('ronda').innerHTML = (r.esFinal ? '<span class="chip final">FINAL</span> ' : '')
+            + 'Ronda ' + r.numero + ' · ' + r.fosforos + ' fósforos · se saca de 1 a ' + r.maxQuitar;
+        const miEquipo = t.participantes.find(e => e.integrantes.some(i => i.id === miId));
+        const situacion = $('miSituacion');
+        mostrar('miPartida', false);
+
+        if (!yo) {
+            situacion.innerHTML = '<div class="aviso">No estás inscripto en este torneo. Podés seguirlo desde el proyector.</div>';
+            return;
+        }
+        if (!miEquipo) {
+            situacion.innerHTML = '<div class="aviso mal">Tu equipo perdió contra la máquina y quedó afuera. Seguí el torneo desde el proyector.</div>';
+            return;
+        }
+        const p = r.partidas.find(x => x.equipoA.id === miEquipo.id || x.equipoB.id === miEquipo.id);
+        situacion.innerHTML = '<div style="text-align:center;margin-bottom:10px">Tu equipo: <strong>' + esc(miEquipo.nombre)
+            + '</strong> (' + miEquipo.integrantes.length + ')</div>';
+        if (!p) return;
+        if (p.estado === 'TERMINADA') {
+            const gano = p.ganadorEquipoId === miEquipo.id;
+            situacion.innerHTML += '<div class="aviso ' + (gano ? 'bien' : '') + '">'
+                + (gano ? '¡Tu equipo ganó esta partida! ' : '')
+                + 'Esperando que terminen las demás partidas de la ronda…</div>';
+            renderHistorial(p, miEquipo);
+            return;
+        }
+        mostrar('miPartida', true);
+        renderPartida(p, miEquipo);
+        renderHistorial(p, miEquipo);
+    }
+
+    function renderEquipo(e, turno, miEquipoId) {
+        const nombres = e.maquina ? 'MIN-MAX' : e.integrantes.map(i => esc(i.nombre) + (i.id === e.capitanId ? ' ★' : '')).join(', ');
+        return '<div class="equipo' + (turno ? ' turno' : '') + '"><div class="nombre">' + esc(e.nombre)
+            + (e.id === miEquipoId ? ' (el tuyo)' : '') + '</div><div class="integrantes">' + nombres + '</div></div>';
+    }
+
+    function renderPartida(p, miEquipo) {
+        $('equipos').innerHTML = renderEquipo(p.equipoA, p.turnoEquipoId === p.equipoA.id, miEquipo.id)
+            + renderEquipo(p.equipoB, p.turnoEquipoId === p.equipoB.id, miEquipo.id);
+        $('contador').textContent = p.fosforosRestantes;
+        const mesa = $('mesa');
+        mesa.innerHTML = '';
+        for (let i = 0; i < p.fosforosRestantes; i++) {
+            const f = document.createElement('div'); f.className = 'fosforo'; mesa.appendChild(f);
+        }
+
+        const v = p.votacion;
+        const miTurno = p.turnoEquipoId === miEquipo.id;
+        const clave = v ? p.id + '|' + p.historial.length + '|' + v.equipoId : null;
+        if (clave !== claveVotacion) { claveVotacion = clave; miVoto = null; }
+        finVotacion = v && !v.cerrada ? Date.now() + v.msRestantes : 0;
+
+        const votos = $('votos');
+        votos.innerHTML = '';
+        $('conteo').textContent = '';
+        $('elegida').innerHTML = '';
+        const rival = p.equipoA.id === miEquipo.id ? p.equipoB : p.equipoA;
+
+        if (v && v.cerrada) {
+            $('estado').textContent = miTurno ? 'Tu equipo eligió' : rival.nombre + ' eligió';
+            $('elegida').innerHTML = '<div class="elegida">Sacar ' + v.jugadaElegida + '</div>';
+            marcar(v.jugadaElegida);
+            return;
+        }
+        if (miTurno) {
+            $('estado').textContent = miVoto ? 'Votaste sacar ' + miVoto + '. Podés cambiarlo.' : '¡Votá cuántos sacar!';
+            for (let q = 1; q <= p.maxQuitar; q++) {
+                const b = document.createElement('button');
+                b.className = 'btn' + (miVoto === q ? ' elegido' : '');
+                b.textContent = 'Sacar ' + q;
+                b.disabled = q > p.fosforosRestantes;
+                b.addEventListener('click', () => votar(q));
+                votos.appendChild(b);
+            }
+            if (v) {
+                const total = miEquipo.integrantes.length;
+                const conteo = Object.entries(v.conteo).map(([q, n]) => 'sacar ' + q + ': ' + n).join(' · ');
+                $('conteo').textContent = 'Votaron ' + v.votantes.length + ' de ' + total + (conteo ? ' — ' + conteo : '');
+            }
+        } else {
+            $('estado').textContent = rival.maquina ? 'Juega la máquina…' : 'Vota ' + rival.nombre + '…';
+        }
+    }
+
+    function renderHistorial(p, miEquipo) {
+        mostrar('cardHistorial', true);
+        const hist = $('historial');
+        hist.innerHTML = p.historial.length === 0 ? '<li class="vacio">Todavía no hay jugadas.</li>' : '';
+        p.historial.forEach((j, i) => {
+            const li = document.createElement('li');
+            li.textContent = (i + 1) + '. ' + (j.equipoId === miEquipo.id ? 'Tu equipo' : j.nombre) + ' sacó ' + j.cantidad
+                + ' → quedan ' + j.fosforosDespues;
+            hist.appendChild(li);
+        });
+    }
+
+    function renderCampeon(t) {
+        const c = t.campeon;
+        $('nombreCampeon').textContent = c.nombre;
+        const soyCampeon = c.integrantes.some(i => i.id === miId);
+        $('campeonYo').innerHTML = soyCampeon ? '<div class="aviso bien" style="margin-top:10px">¡Son los campeones!</div>' : '';
+        $('integrantesCampeon').innerHTML = c.maquina ? '<li>La máquina (MIN-MAX) ganó el torneo.</li>'
+            : c.integrantes.map(i => '<li><span>' + esc(i.nombre) + (i.id === c.capitanId ? ' ★ capitán' : '') + '</span><span>'
+                + i.partidasJugadas + ' partidas</span></li>').join('');
+    }
+
+    function marcar(q) {
+        const fs = document.querySelectorAll('#mesa .fosforo');
+        fs.forEach((f, i) => f.classList.toggle('marcado', i >= fs.length - q));
+    }
+
+    function actualizarCuenta() {
+        const el = $('cuenta');
+        if (!el) return;
+        el.textContent = finVotacion ? Math.max(0, Math.ceil((finVotacion - Date.now()) / 1000)) + ' s' : '';
+    }
+
+    if (torneoId) conectar(); else vistaInicio();
+</script>
+</body>
+</html>

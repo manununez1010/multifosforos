@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multifósforos - Crear partida</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<div class="container">
+    <div class="header"><h1>Crear partida</h1></div>
+    <div class="card">
+        <label for="nombre">Tu nombre</label>
+        <input id="nombre" maxlength="20" placeholder="Ej.: Ana">
+
+        <label for="fosforos">Fósforos iniciales</label>
+        <input id="fosforos" type="number" min="5" max="50" value="15">
+        <div class="ayuda">Entre 5 y 50.</div>
+
+        <label for="maxQuitar">Máximo que se puede sacar por turno</label>
+        <input id="maxQuitar" type="number" min="2" max="5" value="3">
+        <div class="ayuda">Entre 2 y 5.</div>
+
+        <label for="modo">Rival</label>
+        <select id="modo">
+            <option value="HUMANOS">Otra persona</option>
+            <option value="CONTRA_MAQUINA">La máquina (MIN-MAX)</option>
+        </select>
+
+        <div class="acciones">
+            <button class="btn" id="btnCrear">Crear y entrar</button>
+            <a class="btn btn-secundario" href="index.html">Volver</a>
+        </div>
+        <div id="mensaje" class="mensaje"></div>
+    </div>
+</div>
+<script src="comun.js"></script>
+<script>
+    document.getElementById('nombre').value = sessionStorage.getItem('nombre') || '';
+
+    document.getElementById('btnCrear').addEventListener('click', async () => {
+        const msg = document.getElementById('mensaje');
+        const nombre = document.getElementById('nombre').value.trim();
+        if (!nombre) { mostrarMensaje(msg, 'Ingresá tu nombre', 'error'); return; }
+        try {
+            const resp = await fetch('/api/partidas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fosforos: parseInt(document.getElementById('fosforos').value, 10),
+                    maxQuitar: parseInt(document.getElementById('maxQuitar').value, 10),
+                    modo: document.getElementById('modo').value
+                })
+            });
+            const partida = await resp.json();
+            if (!resp.ok) throw new Error(partida.error || 'No se pudo crear la partida');
+            await unirseAPartida(partida.id, nombre);
+            window.location.href = 'juego.html?id=' + encodeURIComponent(partida.id);
+        } catch (e) {
+            mostrarMensaje(msg, e.message, 'error');
+        }
+    });
+</script>
+</body>
+</html>

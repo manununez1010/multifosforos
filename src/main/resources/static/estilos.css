@@ -1,0 +1,41 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    color: #333;
+}
+.container { max-width: 900px; margin: 0 auto; padding: 20px; }
+.header { text-align: center; color: white; margin: 20px 0 30px; }
+.header h1 { font-size: 2.4em; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); text-transform: uppercase; }
+.header p { opacity: .9; margin-top: 6px; }
+.card {
+    background: white; border-radius: 15px; padding: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin-bottom: 20px;
+}
+.card h2 { margin-bottom: 16px; color: #4a3b8f; }
+label { display: block; font-weight: 600; margin: 14px 0 6px; }
+input, select {
+    width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em;
+}
+input:focus, select:focus { outline: none; border-color: #667eea; }
+.ayuda { font-size: .85em; color: #777; margin-top: 4px; }
+.btn {
+    display: inline-block; padding: 12px 26px; border: none; border-radius: 8px; cursor: pointer;
+    font-size: 1em; font-weight: 600; text-decoration: none; color: white;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin-top: 18px;
+}
+.btn:hover { opacity: .9; }
+.btn:disabled { background: #bbb; cursor: not-allowed; }
+.btn-secundario { background: #f0f0f5; color: #4a3b8f; }
+.acciones { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.mensaje { margin-top: 14px; padding: 12px; border-radius: 8px; display: none; }
+.mensaje.error { display: block; background: #fdecea; color: #a12622; }
+.mensaje.ok { display: block; background: #e8f5e9; color: #256029; }
+.lista-partidas { list-style: none; margin-top: 10px; }
+.lista-partidas li {
+    padding: 12px; border: 2px solid #eee; border-radius: 8px; margin-bottom: 8px; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.lista-partidas li:hover { border-color: #667eea; }
+.vacio { color: #888; font-style: italic; }
